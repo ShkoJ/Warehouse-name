@@ -30,6 +30,7 @@ export interface InventoryItem {
   last_count_date: string;
   reorder_level: number;
   supplier?: string;
+  image_url?: string;
 }
 
 interface InventoryDashboardProps {

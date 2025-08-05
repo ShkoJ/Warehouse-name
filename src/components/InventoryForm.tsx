@@ -66,7 +66,9 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
     last_count_date: new Date().toISOString().split('T')[0],
     reorder_level: 0,
     supplier: '',
+    image_url: '',
   });
+  const [customCategory, setCustomCategory] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -83,36 +85,36 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
         last_count_date: item.last_count_date,
         reorder_level: item.reorder_level,
         supplier: item.supplier || '',
+        image_url: item.image_url || '',
       });
+      
+      // Check if category is custom (not in predefined list)
+      if (item.category && !categories.includes(item.category)) {
+        setCustomCategory(item.category);
+      }
     }
   }, [item]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.sku.trim()) {
-      newErrors.sku = 'SKU is required';
-    }
+    // Only require essential fields
     if (!formData.item_name.trim()) {
       newErrors.item_name = 'Item name is required';
     }
     if (formData.quantity_counted < 0) {
       newErrors.quantity_counted = 'Quantity must be 0 or greater';
     }
-    if (!formData.unit_of_measure) {
-      newErrors.unit_of_measure = 'Unit of measure is required';
-    }
-    if (!formData.location_in_warehouse.trim()) {
-      newErrors.location_in_warehouse = 'Location is required';
-    }
-    if (!formData.category) {
-      newErrors.category = 'Category is required';
+    if (formData.reorder_level < 0) {
+      newErrors.reorder_level = 'Reorder level must be 0 or greater';
     }
     if (!formData.last_count_date) {
       newErrors.last_count_date = 'Last count date is required';
     }
-    if (formData.reorder_level < 0) {
-      newErrors.reorder_level = 'Reorder level must be 0 or greater';
+    
+    // Category validation (either select or custom)
+    if (!formData.category && !customCategory.trim()) {
+      newErrors.category = 'Category is required';
     }
 
     setErrors(newErrors);
@@ -123,7 +125,12 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
     e.preventDefault();
     
     if (validateForm()) {
-      onSubmit(formData);
+      // Use custom category if provided, otherwise use selected category
+      const finalCategory = customCategory.trim() || formData.category;
+      onSubmit({
+        ...formData,
+        category: finalCategory,
+      });
     }
   };
 
@@ -156,13 +163,36 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="image_url">Item Picture (URL)</Label>
+              <Input
+                id="image_url"
+                value={formData.image_url}
+                onChange={(e) => handleInputChange('image_url', e.target.value)}
+                placeholder="Enter image URL (optional)"
+              />
+              {formData.image_url && (
+                <div className="mt-2">
+                  <img 
+                    src={formData.image_url} 
+                    alt="Preview" 
+                    className="w-20 h-20 object-cover rounded-lg border"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="sku">SKU/Item ID *</Label>
+              <Label htmlFor="sku">SKU/Item ID</Label>
               <Input
                 id="sku"
                 value={formData.sku}
                 onChange={(e) => handleInputChange('sku', e.target.value)}
-                placeholder="Enter SKU"
+                placeholder="Enter SKU (optional)"
                 className={errors.sku ? 'border-destructive' : ''}
               />
               {errors.sku && <p className="text-sm text-destructive">{errors.sku}</p>}
@@ -195,13 +225,13 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="unit_of_measure">Unit of Measure *</Label>
+              <Label htmlFor="unit_of_measure">Unit of Measure</Label>
               <Select
                 value={formData.unit_of_measure}
                 onValueChange={(value) => handleInputChange('unit_of_measure', value)}
               >
                 <SelectTrigger className={errors.unit_of_measure ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Select unit" />
+                  <SelectValue placeholder="Select unit (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {unitsOfMeasure.map((unit) => (
@@ -215,12 +245,12 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location_in_warehouse">Location in Warehouse *</Label>
+              <Label htmlFor="location_in_warehouse">Location in Warehouse</Label>
               <Input
                 id="location_in_warehouse"
                 value={formData.location_in_warehouse}
                 onChange={(e) => handleInputChange('location_in_warehouse', e.target.value)}
-                placeholder="e.g., Aisle 1, Shelf 3"
+                placeholder="e.g., Aisle 1, Shelf 3 (optional)"
                 className={errors.location_in_warehouse ? 'border-destructive' : ''}
               />
               {errors.location_in_warehouse && <p className="text-sm text-destructive">{errors.location_in_warehouse}</p>}
@@ -229,11 +259,19 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select
-                value={formData.category}
-                onValueChange={(value) => handleInputChange('category', value)}
+                value={customCategory ? '' : formData.category}
+                onValueChange={(value) => {
+                  if (value === 'custom') {
+                    setCustomCategory('');
+                    handleInputChange('category', '');
+                  } else {
+                    setCustomCategory('');
+                    handleInputChange('category', value);
+                  }
+                }}
               >
                 <SelectTrigger className={errors.category ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder="Select or add custom category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -241,8 +279,22 @@ const InventoryForm = ({ item, onSubmit, onClose }: InventoryFormProps) => {
                       {category}
                     </SelectItem>
                   ))}
+                  <SelectItem value="custom">+ Add Custom Category</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {(customCategory !== '' || (!formData.category && !categories.includes(formData.category))) && (
+                <Input
+                  placeholder="Enter custom category"
+                  value={customCategory}
+                  onChange={(e) => {
+                    setCustomCategory(e.target.value);
+                    handleInputChange('category', '');
+                  }}
+                  className="mt-2"
+                />
+              )}
+              
               {errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
             </div>
 

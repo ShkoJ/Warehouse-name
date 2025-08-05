@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit, Trash2, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit, Trash2, AlertTriangle, ChevronUp, ChevronDown, Package } from 'lucide-react';
 import { InventoryItem } from './InventoryDashboard';
 
 interface InventoryTableProps {
@@ -94,6 +94,7 @@ const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps) => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Image</TableHead>
             <TableHead 
               className="cursor-pointer hover:bg-muted/50 select-none"
               onClick={() => handleSort('sku')}
@@ -152,6 +153,23 @@ const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps) => {
               key={item.id} 
               className={isLowStock(item) ? "bg-low-stock-bg border-low-stock/20" : ""}
             >
+              <TableCell>
+                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                  {item.image_url ? (
+                    <img 
+                      src={item.image_url} 
+                      alt={item.item_name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <Package className={`h-6 w-6 text-muted-foreground ${item.image_url ? 'hidden' : ''}`} />
+                </div>
+              </TableCell>
               <TableCell className="font-medium">{item.sku}</TableCell>
               <TableCell>
                 <div className="flex items-center">
